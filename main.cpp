@@ -46,7 +46,6 @@ class LED{
  status = false; //Set the status variable to show the LED is off
  }
 };
-
 float setpoint; // desired output  
 float processVariable; // current output  
 float error123; // difference between setpoint and processVariable  
