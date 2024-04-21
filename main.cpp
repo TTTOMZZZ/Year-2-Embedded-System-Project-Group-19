@@ -251,7 +251,7 @@ int main() {
         serial_config(); 
     }
       lcd.locate(0,0);
-      lcd.printf("P: %.1f %.1f %.1f\n",disCount,angleCount, angleCountChanges);
+      lcd.printf("P: %.1f %.1f\n",Speed1,Speed2);
       lcd.printf("Bool: %d %d %d %d %d %d\n", s1,s2,s3,s4,s5,s6);
 }
 /* serial_config allows you to set up your HM-10 module via USB serial port*/
