@@ -188,7 +188,7 @@ int main() {
     state=initialisation;
     /*This is the ticker code for encoders*/
     encoderTicker.attach(&getPuls,0.01); 
-    PwmTicker.attach(&setPWM, 0.01);
+    PwmTicker.attach(&setPWM, 0.02);
     while(1){
         //sensor codes
         if(SI1.read()<=0.6f){
