@@ -67,7 +67,7 @@ float calculateOutput(float setpoint, float processVariable) {
     //Initialisation of the encoders.
     Timer encoderTimer;
     float EncoderT,revolutionCounter1, revolutionCounter2,RPM1,RPM2, Speed1, Speed2, disCount,angleCount;
-    QEI encoder1 (PC_2, PC_3, NC, 512, QEI::X2_ENCODING);
+    QEI encoder1 (PC_2, PB_14, NC, 512, QEI::X2_ENCODING);
     QEI encoder2 (PC_1, PC_0, NC, 512, QEI::X2_ENCODING);
     C12832 lcd(D11, D13, D12, D7, D10);     //Creates an LCD Object from the LCD library 
     //Define the function getPuls here, so that can be called later on.
@@ -88,7 +88,7 @@ void getPuls(void){
         encoderTimer.start();    
     }
 DigitalOut Direction1(PC_6), Direction2(PB_8);
-PWM out1(PA_15), out2(PB_14);
+PWM out1(PA_15), out2(PB_7);
 static float PwmOut1=0.5, PwmOut2=0.5;
 
 void brakes(){
@@ -102,6 +102,7 @@ void brakes(){
 LED greenLED(D9);
 DigitalOut SO1(PA_10),SO2(PB_3),SO3(PB_5),SO4(PB_4),SO5(PB_13),SO6(PA_9);
 AnalogIn SI1(PA_1),SI2(PB_1),SI3(PC_4),SI4(PA_4),SI5(PB_0),SI6(PC_5); 
+Timer noinput;
 bool s1,s2,s3,s4,s5,s6;
 float angleCountChanges=0;
 void setPWM(void){
@@ -116,34 +117,41 @@ void setPWM(void){
             greenLED.on();
             //insert PID here
             if(s3){
-                PwmOut1=0.6, PwmOut2=0.58;
+                PwmOut1=0.578, PwmOut2=0.567;
+                noinput.reset();
             };
             if(s4){
-                PwmOut1=0.58, PwmOut2=0.6;
+                PwmOut1=0.567, PwmOut2=0.578;
+                noinput.reset();
             };
             if(s5){
-                PwmOut1=0.48, PwmOut2=0.58;
+                PwmOut1=0.448, PwmOut2=0.587;
+                noinput.reset();
             };
             if(s6){
-                PwmOut1=0.45, PwmOut2=0.60;
+                PwmOut1=0.448, PwmOut2=0.587;
+                noinput.reset();
             };
             if(s2){
-                PwmOut1=0.58, PwmOut2=0.48;
+                PwmOut1=0.604, PwmOut2=0.486;
+                noinput.reset();
             };
             if(s1){
-                PwmOut1=0.60, PwmOut2=0.45;
+                PwmOut1=0.587, PwmOut2=0.448;
+                noinput.reset();
             };
             out1.write(PwmOut1+calculateOutput(PwmOut1,(Speed1+2.5)/5)),out2.write(PwmOut2+calculateOutput(PwmOut2,(Speed1+2.5)/5));
             break;
             
-
         case (TurnAround) :
             angleCountChanges=angleCountChanges+abs((Speed1-Speed2)/0.14*EncoderT);
             greenLED.off();
             //insert PID here
             PwmOut1=0.68, PwmOut2=0.33;
-            if(angleCountChanges>=(PI)){
+            if(angleCountChanges>=(2*PI/3)){
                 if(s3||s4){   
+                noinput.reset();
+                noinput.start();
                 state = TrackTheLine;
                 disCount=0;
                 angleCount=0; 
@@ -234,6 +242,7 @@ int main() {
                 state=TrackTheLine;
                 disCount=0;
                 angleCount=0; 
+                noinput.start();
             }
             if (s == '0') {
                 state=initialisation;
@@ -243,12 +252,17 @@ int main() {
 
             if (s == '2') {
                 state=TurnAround;
+                noinput.stop();
+                noinput.reset();
                 disCount=0;
                 angleCount=0; 
                 angleCountChanges=0;
                 encoderTimer.start();
         }
         serial_config(); 
+    }
+    if(noinput.read()>0.4){
+        PwmOut1=0.5, PwmOut2=0.5;
     }
       lcd.locate(0,0);
       lcd.printf("P: %.1f %.1f\n",Speed1,Speed2);
