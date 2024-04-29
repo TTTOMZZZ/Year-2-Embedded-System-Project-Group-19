@@ -101,7 +101,7 @@ void brakes(){
     }
 LED greenLED(D9);
 DigitalOut SO1(PA_10),SO2(PB_3),SO3(PB_5),SO4(PB_4),SO5(PB_13),SO6(PA_9);
-AnalogIn SI1(PA_1),SI2(PB_1),SI3(PC_4),SI4(PA_4),SI5(PB_0),SI6(PC_5); 
+AnalogIn SI1(PC_3),SI2(PB_1),SI3(PC_4),SI4(PA_4),SI5(PB_0),SI6(PC_5); 
 Timer noinput;
 bool s1,s2,s3,s4,s5,s6;
 float angleCountChanges=0;
@@ -199,7 +199,7 @@ int main() {
     PwmTicker.attach(&setPWM, 0.02);
     while(1){
         //sensor codes
-        if(SI1.read()<=0.75f){
+        if(SI1.read()*1000<=15.0f){
             s1=1;
         }
         else{
@@ -264,8 +264,10 @@ int main() {
     if(noinput.read()>0.4){
         PwmOut1=0.5, PwmOut2=0.5;
     }
+    float sensor1reading;
+    sensor1reading=SI1.read();
       lcd.locate(0,0);
-      lcd.printf("P: %.1f %.1f\n",Speed1,Speed2);
+      lcd.printf("P: %.2f %.2f\n",sensor1reading*1000,SI1.read()*1000);
       lcd.printf("Bool: %d %d %d %d %d %d\n", s1,s2,s3,s4,s5,s6);
 }
 /* serial_config allows you to set up your HM-10 module via USB serial port*/
