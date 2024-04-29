@@ -148,7 +148,7 @@ void setPWM(void){
             greenLED.off();
             //insert PID here
             PwmOut1=0.68, PwmOut2=0.33;
-            if(angleCountChanges>=(2*PI/3)){
+            if(angleCountChanges>=(2*PI/4)){
                 if(s3||s4){   
                 noinput.reset();
                 noinput.start();
@@ -199,37 +199,37 @@ int main() {
     PwmTicker.attach(&setPWM, 0.02);
     while(1){
         //sensor codes
-        if(SI1.read()<=0.6f){
+        if(SI1.read()<=0.75f){
             s1=1;
         }
         else{
             s1=0;
         }
-        if(SI2.read()<=0.6f){
+        if(SI2.read()<=0.75f){
             s2=1;
         }
         else{
             s2=0;
         }
-        if(SI3.read()<=0.6f){
+        if(SI3.read()<=0.75f){
             s3=1;
         }
         else{
             s3=0;
         }
-        if(SI4.read()<=0.6f){
+        if(SI4.read()<=0.75f){
             s4=1;
         }
         else{
             s4=0;
         }
-        if(SI5.read()<=0.6f){
+        if(SI5.read()<=0.75f){
             s5=1;
         }
         else{
             s5=0;
         }
-        if(SI6.read()<=0.6f){
+        if(SI6.read()<=0.75f){
             s6=1;
         }
         else{
