@@ -1,79 +1,82 @@
 /*
-ESP Group 19 
-Group Members:
-    Darshana Vigneswaran
-    Olebogeng Dipholo
-    Feiyu Tang
-    Yifan Zhang
-    Ashutosh Desai
+University of Manchester
+    2024.5.1
+    Year2
+    ESP Group 19
+    Group Members:
+   Darshana Vigneswaran
+   Olebogeng Dipholo
+   Feiyu Tang
+   Yifan Zhang
+   Ashutosh Desai
 */
 #include "mbed.h"
 #include "C12832.h"                     //Imports the library for the LCD screen
 #include "QEI.h"                        //Imports the Quadrature Encoder Interface Library.
-#include "math.h"                       //Imports the Math library for easy 
+#include "math.h"                       //Imports the Math library for easy
 #define PI           3.14159265358979323846
-
+//Define PWM signal class for motor driving.
 class PWM{
     private:
         PwmOut PwmSignal;
     public:
         PWM(PinName pin) : PwmSignal(pin){};
-        void write(float a){                                   //Public member function for turning the LED on
-        PwmSignal=a;                           //Set output to 0 (LED is active low)                         
-    }
-
-        void read(void){                                  //Public member function for turning the LED off
-        PwmSignal.read();                           //Set output to 1 (LED is active low)                    
+        void write(float a){
+        PwmSignal=a;
     }
         void period_us(int b){
         PwmSignal.period_us(b);
         }
 };
+//Defind LED class to indicate the state machine that the buggy is currently running on.
 class LED{
-    protected: 
- DigitalOut outputSignal; //Declaration of DigitalOut object
- bool status; //Variable to recall the state of the LED
+    protected:
+        DigitalOut outputSignal; //Declaration of DigitalOut object
+        bool status; //Variable to recall the state of the LED
     public: //Public declarations
- LED(PinName pin) : outputSignal(pin){off();} //Constructor - user provided pin name is assigned to the DigitalOut
- void on(void) //Public member function for turning the LED on
- {
- outputSignal = 0; //Set output to 0 (LED is active low)
- status = true; //Set the status variable to show the LED is on
- }
- void off(void) //Public member function for turning the LED off
- {
- outputSignal = 1; //Set output to 1 (LED is active low)
- status = false; //Set the status variable to show the LED is off
- }
+        LED(PinName pin) : outputSignal(pin){off();} //Constructor - user provided pin name is assigned to the DigitalOut
+        void on(void) //Public member function for turning the LED on
+        {
+        outputSignal = 0; //Set output to 0 (LED is active low)
+        status = true; //Set the status variable to show the LED is on
+        }
+        void off(void) //Public member function for turning the LED off
+        {
+        outputSignal = 1; //Set output to 1 (LED is active low)
+        status = false; //Set the status variable to show the LED is off
+        }
 };
-float setpoint; // desired output  
-float processVariable; // current output  
-float error123; // difference between setpoint and processVariable  
-float previousError; // error in previous iteration  
-float integral; // integral of error  
-float derivative; // derivative of error  
-float kp=0.4; // proportional gain  
-float ki=0.07; // integral gain  
-float kd=0.1; // derivative gain  
-float output; // output of the controller  
-float calculateOutput(float setpoint, float processVariable) {  
-    error123 = setpoint - processVariable;  
-    integral += error123;  
-    derivative = error123 - previousError;  
-    output = kp * error123 + ki * integral + kd * derivative;  
-    previousError = error123;  
-    return output;  
-}  
-    //Initialisation of the encoders.
-    Timer encoderTimer;
-    float EncoderT,revolutionCounter1, revolutionCounter2,RPM1,RPM2, Speed1, Speed2, disCount,angleCount;
-    QEI encoder1 (PC_2, PB_14, NC, 512, QEI::X2_ENCODING);
-    QEI encoder2 (PC_1, PC_0, NC, 512, QEI::X2_ENCODING);
-    C12832 lcd(D11, D13, D12, D7, D10);     //Creates an LCD Object from the LCD library 
-    //Define the function getPuls here, so that can be called later on.
-    typedef enum {initialisation, TrackTheLine, TurnAround} ProgramState;    //Initialisation of the state machines
-    ProgramState state;       
-    int Pulses1=0, Pulses2=0; //Used to show pulses from encoders for TDA.
+//PID algorithm parameters and function;
+float setpoint; // desired output
+float processVariable; // current output
+float error123; // difference between setpoint and processVariable
+float previousError; // error in previous iteration
+float integral; // integral of error
+float derivative; // derivative of error
+float kp=0.4; // proportional gain
+float ki=0.07; // integral gain
+float kd=0.1; // derivative gain
+float output; // output of the controller
+float calculateOutput(float setpoint, float processVariable) {
+    error123 = setpoint - processVariable;
+    integral += error123;
+    derivative = error123 - previousError;
+    output = kp * error123 + ki * integral + kd * derivative;
+    previousError = error123;
+    return output;
+}
+//Initialisation of the encoders.
+Timer encoderTimer;
+float EncoderT,revolutionCounter1, revolutionCounter2,RPM1,RPM2, Speed1, Speed2, disCount,angleCount;
+QEI encoder1 (PC_2, PB_14, NC, 512, QEI::X2_ENCODING);
+QEI encoder2 (PC_1, PC_3, NC, 512, QEI::X2_ENCODING);
+int Pulses1=0, Pulses2=0;
+//Creates an LCD Object from the LCD library
+C12832 lcd(D11, D13, D12, D7, D10);
+//Initialisation of the state machines
+typedef enum {initialisation, TrackTheLine, TurnAround} ProgramState;
+ProgramState state;
+//Define the function to calculate the angular and linear speed of the buggy from data obtained by encoders.
 void getPuls(void){
         EncoderT=encoderTimer.read();
         encoderTimer.stop();
@@ -85,28 +88,25 @@ void getPuls(void){
         disCount=disCount+((Speed1+Speed2)/2*EncoderT);
         angleCount=angleCount+((Speed1-Speed2)/0.135*EncoderT);
         encoder1.reset(), encoder2.reset(),encoderTimer.reset();
-        encoderTimer.start();    
+        encoderTimer.start();  
     }
+//Initialisation of the pins required for motor drive board.
 DigitalOut Direction1(PC_6), Direction2(PB_8);
 PWM out1(PA_15), out2(PB_7);
 static float PwmOut1=0.5, PwmOut2=0.5;
-
-void brakes(){
-        Direction1=1,Direction2=1;
-        wait(0.03);
-        Direction1=0,Direction2=0;
-        PwmOut1=0.5,PwmOut2=0.5;
-        out1.write(PwmOut1),out2.write(PwmOut2);
-        wait(0.5);
-    }
+//Initialisation of the pin for LED.
 LED greenLED(D9);
+//Initialisation of the pins for powering the sensors and reading from sensors.
 DigitalOut SO1(PA_10),SO2(PB_3),SO3(PB_5),SO4(PB_4),SO5(PB_13),SO6(PA_9);
-AnalogIn SI1(PC_3),SI2(PB_1),SI3(PC_4),SI4(PA_4),SI5(PB_0),SI6(PC_5); 
-Timer noinput;
+AnalogIn SI1(PC_0),SI2(PB_1),SI3(PC_4),SI4(PA_4),SI5(PB_0),SI6(PC_5);
 bool s1,s2,s3,s4,s5,s6;
+//Initialisation of the time to count the time when buggy is off the line.
+Timer noinput;
+//Initialisation of the float to count angle changes in total for turning desired degree.
 float angleCountChanges=0;
+//Function used to be call by ticker, which determine the PWM signal based on current state machine.
 void setPWM(void){
-    switch(state){                       //Set the duty cycles according to the state machines. PID wil be a  
+    switch(state){
         case (initialisation) :
             greenLED.off();
             PwmOut1=0.5,PwmOut2=0.5;
@@ -142,19 +142,19 @@ void setPWM(void){
             };
             out1.write(PwmOut1+calculateOutput(PwmOut1,(Speed1+2.5)/5)),out2.write(PwmOut2+calculateOutput(PwmOut2,(Speed1+2.5)/5));
             break;
-            
+         
         case (TurnAround) :
             angleCountChanges=angleCountChanges+abs((Speed1-Speed2)/0.14*EncoderT);
             greenLED.off();
             //insert PID here
             PwmOut1=0.68, PwmOut2=0.33;
             if(angleCountChanges>=(2*PI/4)){
-                if(s3||s4){   
+                if(s3||s4){  
                 noinput.reset();
                 noinput.start();
                 state = TrackTheLine;
                 disCount=0;
-                angleCount=0; 
+                angleCount=0;
                 angleCountChanges=0;
                 }
             }
@@ -162,22 +162,18 @@ void setPWM(void){
             break;
     }
 }
-//BLE
+//Initialisation of the BLE device.
     Serial hm10(PA_11, PA_12);
     Serial pc(USBTX, USBRX);
     char s;
     char w;
     void serial_config();
-
-
     void serial_config(){
-  if (pc.readable()) {
-    w = pc.getc();
-    hm10.putc(w);
-  }
-}
-
-//
+        if (pc.readable()) {
+        w = pc.getc();
+        hm10.putc(w);
+        }
+    }
 int main() {
     //Powring on the sensor.
     SO1=1,SO2=1,SO3=1,SO4=1,SO5=1,SO6=1;
@@ -189,18 +185,22 @@ int main() {
     //End of Bluetooth;
     Ticker encoderTicker, PwmTicker;
     //Initialisation of the motors.
-    DigitalOut Bipolar1(PC_8), Bipolar2(PC_9), Enable(PB_12); 
-    Bipolar1=1, Bipolar2=1, Enable=1;  Direction1=0, Direction2=0;          //Set the pin to TTL high.
-    out1.period_us(45); out2.period_us(45);                                 // Setting the period to 25us so that wont hear the beeping noise.
-    C12832 lcd(D11, D13, D12, D7, D10);                                     //Creates an LCD Object from the LCD library 
+    DigitalOut Bipolar1(PC_8), Bipolar2(PC_9), Enable(PB_12);
+    //Set the Bipolar pins to TTL high and direction pins to TTL low.
+    Bipolar1=1, Bipolar2=1, Enable=1;  Direction1=0, Direction2=0;
+    // Setting the period to 25us so that wont hear the beeping noise.
+    out1.period_us(45); out2.period_us(45);
+    //Creates an LCD Object from the LCD library
+    C12832 lcd(D11, D13, D12, D7, D10);
+    //Set the initial state of the buggy.
     state=initialisation;
     /*This is the ticker code for encoders*/
-    encoderTicker.attach(&getPuls,0.01); 
+    encoderTicker.attach(&getPuls,0.01);
     PwmTicker.attach(&setPWM, 0.02);
+    //sensor detecting, BLE communication, Stop timer detection and LCD output in the while loop.
     while(1){
-        //sensor codes
-        if(SI1.read()*1000<=15.0f){
-            s1=1;
+        if(SI1.read()<=0.75f){
+           s1=1;
         }
         else{
             s1=0;
@@ -212,10 +212,10 @@ int main() {
             s2=0;
         }
         if(SI3.read()<=0.75f){
-            s3=1;
+           s3=1;
         }
         else{
-            s3=0;
+           s3=0;
         }
         if(SI4.read()<=0.75f){
             s4=1;
@@ -241,34 +241,39 @@ int main() {
             if (s == '1') {
                 state=TrackTheLine;
                 disCount=0;
-                angleCount=0; 
+                angleCount=0;
                 noinput.start();
             }
             if (s == '0') {
                 state=initialisation;
                 disCount=0;
-                angleCount=0; 
+                angleCount=0;
             }
-
             if (s == '2') {
                 state=TurnAround;
                 noinput.stop();
                 noinput.reset();
                 disCount=0;
-                angleCount=0; 
+                angleCount=0;
                 angleCountChanges=0;
                 encoderTimer.start();
         }
-        serial_config(); 
+        serial_config();
     }
+    //stop command used to stop in case there is no white line at the end of the track.
     if(noinput.read()>0.4){
         PwmOut1=0.5, PwmOut2=0.5;
     }
-    float sensor1reading;
-    sensor1reading=SI1.read();
-      lcd.locate(0,0);
-      lcd.printf("P: %.2f %.2f\n",sensor1reading*1000,SI1.read()*1000);
-      lcd.printf("Bool: %d %d %d %d %d %d\n", s1,s2,s3,s4,s5,s6);
+    //debugging session, print out desired parameters on the LCD screen for debugging.
+    lcd.locate(0,0);
+    lcd.printf("P: %.2f\n",SI1.read());
+    lcd.printf("Bool: %d %d %d %d %d %d\n", s1,s2,s3,s4,s5,s6);
 }
-/* serial_config allows you to set up your HM-10 module via USB serial port*/
 }
+//End of the code.
+
+
+
+
+
+
